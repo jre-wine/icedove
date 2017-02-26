@@ -44,21 +44,30 @@ TB_ARGS=""
 while [ $# -gt 0 ]; do
     ARG="$1"
     case ${ARG} in
-        --help) HELP=1
-            usage
-            exit 0
-            ;;
-        --verbose) echo "[[ ... using verbose mode ... ]]"
-            VERBOSE=1
+        --fixmime)
+            FIXMIME=1
             ;;
         -g)
             DEBUGGER=1
             DEBUG=1
             ;;
-#        d)
+#       -d)
 #            USER_DEBUGGER=$2
 #            DEBUG=1
+#            shift
 #            ;;
+        --help)
+            HELP=1
+            usage
+            exit 0
+            ;;
+        --show-backup)
+            do_collect_backup_files
+            exit 0
+            ;;
+        --verbose) echo "[[ ... using verbose mode ... ]]"
+            VERBOSE=1
+            ;;
         '?')
             usage >&2
             exit 1
@@ -77,74 +86,93 @@ if [ "$DEBUGGER" != "" ] && [ "$USER_DEBUGGER" != "" ]; then
     exit 1
 fi
 
-#####################
-# profile migration #
-#####################
+if [ "${FIXMIME}" = "1" ]; then
+    do_fix_mimetypes_rdf
+    do_collect_backup_files
+    exit 0
+fi
 
-# First try the default case for migration, there is only a folder
-# ${ID_PROFILE_FOLDER} and we can migrate this.
+#############################################################################
+#                  User Thunderbird Profile Adoptions                       #
+#                                                                           #
+# The users Icedove/Thunderbird profile(s) doesn't need to be modified in a #
+# different and complicated way. We simply need to ensure that the          #
+# Thunderbird binary is finding the existing profiles in the folder         #
+# $(HOME)/.thunderbird folder or a valid symlink pointing to the profiles.  #
+#                                                                           #
+# To "migrate" a old existing Icedove profile we can simply do a symlink    #
+# from $(HOME)/.thunderbird --> $(HOME)/.icedove .                          #
+#                                                                           #
+# Afterwards do some changes to the file mimeTypes.rdf within every         #
+# profile. Also we can modify existing *icedove*.desktop entries in the     #
+# files.                                                                    #
+#                                                                           #
+#     $(HOME)/.config/mimeapps.list                                         #
+#     $(HOME)/.local/share/applications/mimeapps.list                       #
+#                                                                           #
+#############################################################################
+
+# First try the default case for modification, there is only a folder
+# ${ID_PROFILE_FOLDER} and we can symlink to this.
 if [ -d "${ID_PROFILE_FOLDER}" -o -L "${ID_PROFILE_FOLDER}" ] && \
    [ ! -d "${TB_PROFILE_FOLDER}" -a ! -L "${TB_PROFILE_FOLDER}" ]; then
     debug "found folder '${ID_PROFILE_FOLDER}'"
-    debug "not found folder '${TB_PROFILE_FOLDER}'"
-    debug "Start Thunderbird profile migration, please be patient!"
+    debug "not found folder or symlink '${TB_PROFILE_FOLDER}'"
+    debug "Start Thunderbird profile adoptions, please be patient!"
 
     # open a pop-up window with a message about starting migration
-    inform_migration_start
+    do_inform_migration_start
 
-    cp -a ${ID_PROFILE_FOLDER} ${TB_PROFILE_FOLDER}
-    if [ "$(echo $?)" != 0  ]; then
-        echo "A error happened while copying the Icedove profile folder into '${TB_PROFILE_FOLDER}'"
-        echo "The old unchanged profile(s) will still be found in '${ID_PROFILE_FOLDER}'."
-        echo "Please check for potentially problems like low disk space or wrong access rights!"
-        logger -i -p warning -s "$0: [profile migration] Couldn't copy '${ID_PROFILE_FOLDER}' into '${TB_PROFILE_FOLDER}'!"
-        FAIL=1
-    fi
-    mv ${ID_PROFILE_FOLDER} ${HOME}/.icedove_moved_by_thunderbird_starter
+    # do the symlinking
+    do_thunderbird2icedove_symlink
 
-    # only move on if we not have already a problem
-    if [ "${FAIL}" != 1 ]; then
-        # Fixing mimeTypes.rdf which may have registered the iceweasel binary
+    # fixing mimeTypes.rdf which may have registered the iceweasel binary
+    # as browser, instead of x-www-browser
+    do_fix_mimetypes_rdf
+
+    # Fix local mimeapp.list and *.desktop entries
+    do_migrate_old_icedove_desktop
+
+    # we are finished
+    debug "Thunderbird Profile adoptions done."
+    do_collect_backup_files
+fi
+
+# We found both profile folder,
+# we need to check if .thunderbird is symlinked to .icedove
+if [ -d "${ID_PROFILE_FOLDER}" -a -L "${TB_PROFILE_FOLDER}" ] && \
+   [ "$(/usr/bin/readlink ${TB_PROFILE_FOLDER})" != "${ID_PROFILE_FOLDER}" ];then
+    debug "Found folder ${ID_PROFILE_FOLDER} and a symlink ${TB_PROFILE_FOLDER} that is linked to ${ID_PROFILE_FOLDER}"
+
+# ... or if .icedove is symlinked to .thunderbird
+elif [ -d "${TB_PROFILE_FOLDER}" -a -L "${ID_PROFILE_FOLDER}" ] && \
+     [ "$(/usr/bin/readlink ${ID_PROFILE_FOLDER})" != "${TB_PROFILE_FOLDER}" ];then
+    debug "Found folder ${TB_PROFILE_FOLDER} and a symlink ${ID_PROFILE_FOLDER} that is linked to ${TB_PROFILE_FOLDER}"
+    debug "You may want to remove the symlink ${ID_PROFILE_FOLDER}? It's probably not needed anymore."
+
+    if [ ! -f ${TB_PROFILE_FOLDER}/.migrated ]; then
+        # fixing mimeTypes.rdf which may have registered the iceweasel binary
         # as browser, instead of x-www-browser
-        debug "Fixing possible broken 'mimeTypes.rdf'."
-        for MIME_TYPES_RDF_FILE in $(find ${TB_PROFILE_FOLDER}/ -name mimeTypes.rdf); do
-            sed -i "s|/usr/bin/iceweasel|/usr/bin/x-www-browser|g" "${MIME_TYPES_RDF_FILE}"
-        done
-        debug "Migration done."
-        debug "The old Icedove profile folder was moved to '${HOME}/.icedove_moved_by_thunderbird_starter'"
+        do_fix_mimetypes_rdf
+
+        # Fix local mimeapp.list and *.desktop entries
+        do_migrate_old_icedove_desktop
+        /usr/bin/touch ${TB_PROFILE_FOLDER}/.migrated
     fi
 
-# We found both profile folder, the user has probably a old or otherwise used
-# Thunderbird installation.
+# We found both profile folder, but they are not linked to each other! This
+# is a state we can't solve on our own !!! The user needs to interact and
+# has probably a old or otherwise used Thunderbird installation.
 elif [ -d "${ID_PROFILE_FOLDER}" -o -L "${ID_PROFILE_FOLDER}" ] && \
-     [ -d "${TB_PROFILE_FOLDER}" -o -L "${TB_PROFILE_FOLDER}" ]; then
+     [ -d "${TB_PROFILE_FOLDER}" -o -L "${TB_PROFILE_FOLDER}" ] && \
+     [ "$(/usr/bin/readlink ${TB_PROFILE_FOLDER})" != "${ID_PROFILE_FOLDER}" ]; then
+
     debug "There is already a folder '${TB_PROFILE_FOLDER}', will do nothing."
     debug "Please investigate by yourself!"
     logger -i -p warning -s "$0: [profile migration] Couldn't migrate Icedove into Thunderbird profile due existing folder '${TB_PROFILE_FOLDER}'!"
 
     # display a graphical advice if possible
-    case "${DESKTOP}" in
-        gnome|mate|xfce)
-            local_zenity --info --no-wrap --title "${TITLE}" --text "${DOT_THUNDERBIRD_EXISTS}"
-            if [ $? -ne 0 ]; then
-                local_xmessage -center "${DOT_THUNDERBIRD_EXISTS}"
-            fi
-            FAIL=1
-            ;;
-
-        kde)
-            local_kdialog --title "${TITLE}" --msgbox "${DOT_THUNDERBIRD_EXISTS}"
-            if [ $? -ne 0 ]; then
-                local_xmessage -center "${DOT_THUNDERBIRD_EXISTS}"
-            fi
-            FAIL=1
-            ;;
-
-        *)
-            xmessage -center "${DOT_THUNDERBIRD_EXISTS}"
-            FAIL=1
-            ;;
-    esac
+    do_thunderbird2icedove_error_out
 fi
 
 if [ "$FAIL" = 1 ]; then
@@ -153,11 +181,7 @@ if [ "$FAIL" = 1 ]; then
     exit 1
 fi
 
-# Fix local mimeapp.list and *.desktop entries
-migrate_old_icedove_desktop
-
-# There is no old Icedove profile folder (anymore), we have nothing to
-# migrate, going further by starting Thunderbird.
+# We have nothing to migrate or adopt, going further by starting Thunderbird.
 
 if [ "${DEBUG}" = "" ]; then
     debug "call '$MOZ_LIBDIR/$MOZ_APP_NAME ${TB_ARGS}'"

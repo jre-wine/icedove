@@ -20,6 +20,9 @@ else
     DESKTOP=${XDG_CURRENT_DESKTOP}
 fi
 
+# timestamp like '2017-02-26-113855'
+DATE=$(date +%F-%H%M%S)
+
 # convert to lower case shell safe
 DESKTOP=`echo "$DESKTOP" | tr '[:upper:]' '[:lower:]'`
 
@@ -29,7 +32,7 @@ DESKTOP=`echo "$DESKTOP" | tr '[:upper:]' '[:lower:]'`
 
 DEFAULT_X11_MSG="\
 If you see this message box something went wrong while
-migrating your Icedove profile(s) into the Thunderbird
+adopting your Icedove profile(s) into the Thunderbird
 profile folder!
 
 The following error happened:"
@@ -59,19 +62,19 @@ You see this window because you're starting Thunderbird for the first time
 with underlaying profile(s) from Icedove.
 The Icedove package is now de-branded back to Thunderbird.
 
-The Icedove profile(s) will now be migrated to the Thunderbird folder
-structure. This will take some time!
+The Icedove profile(s) will now be adopted to the Thunderbird folder
+structure. This will take a short time!
 
 Please be patient, the Thunderbird program will be started right after
-the migration.
+the changes.
 
-If you need more information about the de-branding of the Icedove package
-please take a look into
+If you need more information about the de-branding and changes of the
+Icedove package please take a look into
 
 /usr/share/doc/thunderbird/README.Debian.gz
 "
 
-TITLE="Icedove to Thunderbird Profile migration"
+TITLE="Icedove to Thunderbird Profile adoption"
 
 ###################
 # local functions #
@@ -84,8 +87,38 @@ if [ "${VERBOSE}" = "1" ]; then
 fi
 }
 
+# Simple search all files where we made a backup from
+do_collect_backup_files () {
+debug "Collect all files we've made a backup."
+BACKUP_FILES=$(/usr/bin/find ${HOME} -type f -name "*backup_thunderbird_migration2*")
+if [ "${BACKUP_FILES}" != "" ]; then
+    echo "The following backups related Icedove to Thunderbird transition are existing:\\n
+${BACKUP_FILES}"
+else
+    echo "No backups related Icedove to Thunderbird transition found."
+fi
+}
+
+# Fix the file $PROFILE/mimeTypes.rdf
+do_fix_mimetypes_rdf (){
+for MIME_TYPES_RDF_FILE in $(/usr/bin/find ${TB_PROFILE_FOLDER}/ -name mimeTypes.rdf); do
+    RDF_SEARCH_PATTERN=$(grep '/usr/bin/iceweasel\|icedove' ${MIME_TYPES_RDF_FILE})
+    if [ "${RDF_SEARCH_PATTERN}" != "" ]; then
+        echo ${RDF_SEARCH_PATTERN}
+        debug "Backup ${MIME_TYPES_RDF_FILE} to ${MIME_TYPES_RDF_FILE}.backup_thunderbird_migration-${DATE}"
+        cp ${MIME_TYPES_RDF_FILE} ${MIME_TYPES_RDF_FILE}.backup_thunderbird_migration-${DATE}
+
+        debug "Fixing possible broken 'mimeTypes.rdf'."
+        sed -i "s|/usr/bin/iceweasel|/usr/bin/x-www-browser|g" "${MIME_TYPES_RDF_FILE}"
+        sed -i "s|icedove|thunderbird|g" "${MIME_TYPES_RDF_FILE}"
+    else
+        echo "No fix up for ${MIME_TYPES_RDF_FILE} needed."
+    fi
+done
+}
+
 # Inform the user we will starting the migration
-inform_migration_start () {
+do_inform_migration_start () {
 case "${DESKTOP}" in
     gnome|mate|xfce)
         local_zenity --info --no-wrap --title "${TITLE}" --text "${START_MIGRATION}"
@@ -105,6 +138,98 @@ case "${DESKTOP}" in
         xmessage -center "${START_MIGRATION}"
         ;;
 esac
+}
+
+# Function that will do the fixing of mimeapp.list files
+do_migrate_old_icedove_desktop() {
+# Fixing mimeapps.list files in the following folders which may still have
+# icedove.desktop associations
+#
+#   ~/.config/
+#   ~/.local/share/applications/
+#
+# icedove.desktop files are now deprecated, but still commonly around.
+# We can remove them.
+
+# These mimeapps.list files configures default applications for MIME types.
+for MIMEAPPS_LIST in ${HOME}/.config/mimeapps.list ${HOME}/.local/share/applications/mimeapps.list; do
+    # Check if file exists and has old icedove entry
+    if [ -e "${MIMEAPPS_LIST}" ] && \
+          grep -iq "\(userapp-\)*icedove\(-.*\)*\.desktop" "${MIMEAPPS_LIST}"; then
+        debug "Fixing broken '${MIMEAPPS_LIST}'."
+        MIMEAPPS_LIST_COPY="${MIMEAPPS_LIST}.backup_thunderbird_migration-${DATE}"
+
+        # Fix mimeapps.list and create backup, but it's really unlikely we
+        # have an existing backup so no further checking here!
+        # (requires GNU sed 3.02 or ssed for case-insensitive "I")
+        sed -i.backup_thunderbird_migration-${DATE} "s|\(userapp-\)*icedove\(-.*\)*\.desktop|thunderbird.desktop|gI" "${MIMEAPPS_LIST}"
+        if [ $? -ne 0 ]; then
+            echo "The configuration file for default applications for some MIME types"
+            echo "'${MIMEAPPS_LIST}' couldn't be fixed."
+            echo "Please check for potential problems like low disk space or wrong access rights!"
+            logger -i -p warning -s "$0: [profile migration] Couldn't fix '${MIMEAPPS_LIST}'!"
+            exit 1
+        else
+            debug "A copy of the configuration file of default applications for some MIME types"
+            debug "was saved into '${MIMEAPPS_LIST_COPY}'."
+        fi
+    fi
+done
+
+# Migrate old user specific desktop entries
+# Users could have always been created own desktop shortcuts for Icedove in
+# the past. These associations (files named like 'userapp-Icedove-*.desktop')
+# are done in the folder $(HOME)/.local/share/applications/.
+
+# Remove such old icedove.desktop files, superseded by system-wide
+# /usr/share/applications/thunderbird.desktop. The old ones in $HOME don't
+# receive updates and might have missing/outdated fields.
+# *.desktop files and their reverse cache mimeinfo cache provide information
+# about available applications.
+
+for ICEDOVE_DESKTOP in $(find ${HOME}/.local/share/applications/ -iname "*icedove*.desktop"); do
+    ICEDOVE_DESKTOP_COPY=${ICEDOVE_DESKTOP}.backup_thunderbird_migration-${DATE}
+    mv ${ICEDOVE_DESKTOP} ${ICEDOVE_DESKTOP_COPY}
+    # Update the mimeinfo cache.
+    # Not existing *.desktop files in there should simply be ignored by the system anyway.
+    if [ -x "$(which update-desktop-database)" ]; then
+        update-desktop-database ${HOME}/.local/share/applications/
+    fi
+done
+}
+
+# Print out a error message about not possible adoptions
+do_thunderbird2icedove_error_out (){
+case "${DESKTOP}" in
+    gnome|mate|xfce)
+        local_zenity --info --no-wrap --title "${TITLE}" --text "${DOT_THUNDERBIRD_EXISTS}"
+        if [ $? -ne 0 ]; then
+            local_xmessage -center "${DOT_THUNDERBIRD_EXISTS}"
+        fi
+        FAIL=1
+        ;;
+    kde)
+        local_kdialog --title "${TITLE}" --msgbox "${DOT_THUNDERBIRD_EXISTS}"
+        if [ $? -ne 0 ]; then
+            local_xmessage -center "${DOT_THUNDERBIRD_EXISTS}"
+        fi
+        FAIL=1
+        ;;
+    *)
+        xmessage -center "${DOT_THUNDERBIRD_EXISTS}"
+        FAIL=1
+        ;;
+esac
+}
+
+# Symlink .thunderbird to .icedove
+do_thunderbird2icedove_symlink () {
+debug "Try to symlink '${TB_PROFILE_FOLDER}' to '${ID_PROFILE_FOLDER}'"
+if /usr/bin/ln -s "${ID_PROFILE_FOLDER}" "${TB_PROFILE_FOLDER}"; then
+    return 0
+else
+    return 1
+fi
 }
 
 # Wrapping /usr/bin/kdialog calls
@@ -137,62 +262,6 @@ else
 fi
 }
 
-# Function that will do the complete profile migration
-migrate_old_icedove_desktop() {
-# Fixing mimeapps.list files in ~/.config/ and ~/.local ... which may have
-# icedove.desktop associations, the latter location is deprecated, but still
-# commonly used.
-# These mimeapps.list files configures default applications for MIME types.
-for MIMEAPPS_LIST in ${HOME}/.config/mimeapps.list ${HOME}/.local/share/applications/mimeapps.list; do
-    # Check if file exists and has old icedove entry
-    if [ -e "${MIMEAPPS_LIST}" ] && \
-          grep -iq "\(userapp-\)*icedove\(-.*\)*\.desktop" "${MIMEAPPS_LIST}"; then
-        debug "Fixing broken '${MIMEAPPS_LIST}'."
-        MIMEAPPS_LIST_COPY="${MIMEAPPS_LIST}.copy_by_thunderbird_starter"
-        if [ -e ${MIMEAPPS_LIST_COPY} ]; then
-            echo "The configuration file for default applications for some MIME types"
-            echo "'${MIMEAPPS_LIST}' already has a backup file '${MIMEAPPS_LIST_COPY}'."
-            echo "Moving old copy to '${MIMEAPPS_LIST_COPY}-old'!"
-            mv ${MIMEAPPS_LIST_COPY} ${MIMEAPPS_LIST_COPY}-old
-            logger -i -p warning -s "$0: [profile migration] Backup file '${MIMEAPPS_LIST_COPY}' of '${MIMEAPPS_LIST}' already exists, moving to '${MIMEAPPS_LIST_COPY}-old'!"
-        fi
-        # Fix mimeapps.list and create backup
-        # (requires GNU sed 3.02 or ssed for case-insensitive "I")
-        sed -i.copy_by_thunderbird_starter "s|\(userapp-\)*icedove\(-.*\)*\.desktop|thunderbird.desktop|gI" "${MIMEAPPS_LIST}"
-        if [ $? -ne 0 ]; then
-            echo "The configuration file for default applications for some MIME types"
-            echo "'${MIMEAPPS_LIST}' couldn't be fixed."
-            echo "Please check for potential problems like low disk space or wrong access rights!"
-            logger -i -p warning -s "$0: [profile migration] Couldn't fix '${MIMEAPPS_LIST}'!"
-            exit 1
-        fi
-    fi
-    debug "A copy of the configuration file of default applications for some MIME types"
-    debug "was saved into '${MIMEAPPS_LIST_COPY}'."
-done
-
-# Migrate old user specific desktop entries
-# Users could have always been created own desktop shortcuts for Icedove in
-# the past. These associations (files named like 'userapp-Icedove-*.desktop')
-# are done in the folder $(HOME)/.local/share/applications/.
-
-# Remove such old icedove.desktop files, superseded by system-wide
-# /usr/share/applications/thunderbird.desktop. The old ones in $HOME don't
-# receive updates and might have missing/outdated fields.
-# *.desktop files and their reverse cache mimeinfo cache provide information
-# about available applications.
-
-for ICEDOVE_DESKTOP in $(find ${HOME}/.local/share/applications/ -iname "*icedove*.desktop"); do
-    ICEDOVE_DESKTOP_COPY=${ICEDOVE_DESKTOP}.copy_by_thunderbird_starter
-    mv ${ICEDOVE_DESKTOP} ${ICEDOVE_DESKTOP_COPY}
-    # Update the mimeinfo cache.
-    # Not existing *.desktop files in there should simply be ignored by the system anyway.
-    if [ -x "$(which update-desktop-database)" ]; then
-        update-desktop-database ${HOME}/.local/share/applications/
-    fi
-done
-}
-
 # Giving out a information how this script can be called
 usage () {
 cat << EOF
@@ -203,11 +272,22 @@ Options for this script and Thunderbird specific arguments can be mixed up.
 Note that some Thunderbird options needs an additional argument that can't
 be naturally mixed up with other options!
 
-  --help or ? display this help and exit
-  --verbose   verbose mode, increase the output messages to stdout
+  -g          Starts Thunderbird within gdb (needs package thunderbird-dbg!)
+
+  --help or ? Display this help and exit
+
+  --verbose   Verbose mode, increase the output messages to stdout
               (Logging to /var/log/syslog - if nessesary - isn't touched or
                increased by this option!)
-  -g          starts Thunderbird within gdb (needs package thunderbird-dbg!)
+
+Additional options:
+
+  --fixmime      Only calls the subrotine to fix MIME associations in
+                 ~/.thunderbird/$profile/mimeTypes.rdf and exits. Can be
+                 combined with '--verbose'.
+
+  --show-backup  Collect the backup files which where made and print them to
+                 stdout and exits immediately.
 EOF
 #    -d      starts Thunderbird with specific debugger
 cat << EOF
@@ -217,7 +297,7 @@ Examples:
  ${0##*/} --help
 
     Writes this help messages on stdout. If any other option is given it
-    will be ignored. Note that Thunderbird also has a oprion '-h' which needs
+    will be ignored. Note that Thunderbird also has a option '-h' which needs
     explictely given if want the help output for Thunderbird!
 
  ${0##*/} --verbose
@@ -253,12 +333,12 @@ cat << EOF
     like this if you need to run in safe-mode with the JS Error console,
     that can be combined with the -g option:
 
-      ${0##*/} --safe-mode --jsconsole
+      ${0##*/} --safe-mode -jsconsole
 
     Call Thunderbird directly to compose a message with a specific
     attachement.
 
-      ${0##*/} -compose attachment=\$attachment
+      ${0##*/} -compose "to='recipient@tld.org','attachment=/path/attachment'"
 
     Or to see the possible arguments for thunderbird that could be added
     here:
