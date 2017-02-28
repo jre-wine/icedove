@@ -148,7 +148,7 @@ fi
 # We found both profile folder, and .thunderbird is a symlink,
 # we need to check if .thunderbird is symlinked to .icedove
 if [ -d "${ID_PROFILE_FOLDER}" -a -L "${TB_PROFILE_FOLDER}" ] && \
-   [ "$(/usr/bin/readlink -e "${TB_PROFILE_FOLDER}")" = "${ID_PROFILE_FOLDER}" ];then
+   [ "$(readlink -e "${TB_PROFILE_FOLDER}")" = "${ID_PROFILE_FOLDER}" ];then
 
     output_debug "Found folder ${ID_PROFILE_FOLDER}, found a symlink ${TB_PROFILE_FOLDER} pointing to ${ID_PROFILE_FOLDER}"
 
@@ -165,7 +165,7 @@ if [ -d "${ID_PROFILE_FOLDER}" -a -L "${TB_PROFILE_FOLDER}" ] && \
 
 # ... or the opposite if .icedove is symlinked to .thunderbird
 elif [ -d "${TB_PROFILE_FOLDER}" -a -L "${ID_PROFILE_FOLDER}" ] && \
-     [ "$(/usr/bin/readlink -e "${ID_PROFILE_FOLDER}")" != "${TB_PROFILE_FOLDER}" ];then
+     [ "$(readlink -e "${ID_PROFILE_FOLDER}")" != "${TB_PROFILE_FOLDER}" ];then
 
     output_debug "Found folder ${TB_PROFILE_FOLDER}, found a symlink ${ID_PROFILE_FOLDER} pointing to ${TB_PROFILE_FOLDER}"
     output_debug "You may want to remove the symlink ${ID_PROFILE_FOLDER}? It's probably not needed anymore."
@@ -186,13 +186,13 @@ elif [ -d "${TB_PROFILE_FOLDER}" -a -L "${ID_PROFILE_FOLDER}" ] && \
 # is the correct one to use?
 elif [ -d "${ID_PROFILE_FOLDER}" -o -L "${ID_PROFILE_FOLDER}" ] && \
      [ -d "${TB_PROFILE_FOLDER}" -o -L "${TB_PROFILE_FOLDER}" ] && \
-     [ "$(/usr/bin/readlink -e "${TB_PROFILE_FOLDER}")" != "${ID_PROFILE_FOLDER}" ]; then
+     [ "$(readlink -e "${TB_PROFILE_FOLDER}")" != "${ID_PROFILE_FOLDER}" ]; then
 
     output_debug "There is already a folder or symlink '${TB_PROFILE_FOLDER}', will do nothing."
     output_debug "Please investigate by yourself! Some more information below."
     logger -i -p warning -s "$0: [profile migration] Couldn't migrate Icedove into Thunderbird profile due existing or symlinked folder '${TB_PROFILE_FOLDER}'!"
     for CHECK in ${ID_PROFILE_FOLDER} ${TB_PROFILE_FOLDER}; do
-        FILE_CHECK=$(/usr/bin/readlink -e "${CHECK}")
+        FILE_CHECK=$(readlink -e "${CHECK}")
         if [ "${FILE_CHECK}" != "" ] && [ -L "${CHECK}" ]; then
             output_debug "Found symlink '${FILE_CHECK}'"
         elif [ "${FILE_CHECK}" != "" ] && [ -d "${CHECK}" ]; then

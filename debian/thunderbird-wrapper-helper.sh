@@ -96,10 +96,10 @@ TITLE="Icedove to Thunderbird Profile adoption"
 # Simple search all files where we made a backup from
 do_collect_backup_files () {
 output_debug "Collect all files we've made a backup."
-BACKUP_FILES=$(/usr/bin/find ${TB_PROFILE_FOLDER}/ -type f -name "*backup_thunderbird_migration*")
+BACKUP_FILES=$(find ${TB_PROFILE_FOLDER}/ -type f -name "*backup_thunderbird_migration*")
 if [ "${BACKUP_FILES}" != "" ]; then
     output_info "The following backups related Icedove to Thunderbird transition are existing:"
-    /usr/bin/cat << EOF
+    cat << EOF
 ${BACKUP_FILES}
 EOF
 else
@@ -109,7 +109,7 @@ fi
 
 # Create the file .thunderbird/.migrated with some content
 do_create_migrated_mark_file (){
-/bin/cat <<EOF > ${TB_PROFILE_FOLDER}/.migrated
+cat <<EOF > ${TB_PROFILE_FOLDER}/.migrated
 This is a automatically created file by /usr/bin/thunderbird, it will be
 recreated by every start of Thunderbird. Remove that files only if you know
 the propose of this file.
@@ -121,7 +121,7 @@ EOF
 
 # Fix the file $PROFILE/mimeTypes.rdf
 do_fix_mimetypes_rdf (){
-for MIME_TYPES_RDF_FILE in $(/usr/bin/find ${TB_PROFILE_FOLDER}/ -name mimeTypes.rdf); do
+for MIME_TYPES_RDF_FILE in $(find ${TB_PROFILE_FOLDER}/ -name mimeTypes.rdf); do
     RDF_SEARCH_PATTERN=$(grep '/usr/bin/iceweasel\|icedove' ${MIME_TYPES_RDF_FILE})
     if [ "${RDF_SEARCH_PATTERN}" != "" ]; then
         output_debug "Backup ${MIME_TYPES_RDF_FILE} to ${MIME_TYPES_RDF_FILE}.backup_thunderbird_migration-${DATE}"
@@ -259,7 +259,7 @@ esac
 # Symlink .thunderbird to .icedove
 do_thunderbird2icedove_symlink () {
 output_debug "Try to symlink '${TB_PROFILE_FOLDER}' to '${ID_PROFILE_FOLDER}'"
-if /usr/bin/ln -s "${ID_PROFILE_FOLDER}" "${TB_PROFILE_FOLDER}"; then
+if ln -s "${ID_PROFILE_FOLDER}" "${TB_PROFILE_FOLDER}"; then
     return 0
 else
     case "${DESKTOP}" in
@@ -318,13 +318,13 @@ fi
 
 # Simple info output function
 output_info () {
-/usr/bin/echo "INFO  -> $1"
+echo "INFO  -> $1"
 }
 
 # Simple debugging output function
 output_debug () {
 if [ "${VERBOSE}" = "1" ]; then
-    /usr/bin/echo "DEBUG -> $1"
+    echo "DEBUG -> $1"
 fi
 }
 
