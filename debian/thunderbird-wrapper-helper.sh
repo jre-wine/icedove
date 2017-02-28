@@ -24,7 +24,7 @@ fi
 DATE=$(date +%F-%H%M%S)
 
 # convert to lower case shell safe
-DESKTOP=`echo "$DESKTOP" | tr '[:upper:]' '[:lower:]'`
+DESKTOP=$(echo "$DESKTOP" | tr '[:upper:]' '[:lower:]')
 
 #########################################
 # message templates for the X11 dialogs #
