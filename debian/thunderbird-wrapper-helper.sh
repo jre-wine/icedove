@@ -128,8 +128,7 @@ for MIME_TYPES_RDF_FILE in $(find "${TB_PROFILE_FOLDER}/" -name mimeTypes.rdf); 
         cp "${MIME_TYPES_RDF_FILE}" "${MIME_TYPES_RDF_FILE}.backup_thunderbird_migration-${DATE}"
 
         output_debug "Fixing possible broken 'mimeTypes.rdf'."
-        sed -i "s|/usr/bin/iceweasel|/usr/bin/x-www-browser|g" "${MIME_TYPES_RDF_FILE}"
-        sed -i "s|icedove|thunderbird|g" "${MIME_TYPES_RDF_FILE}"
+        sed -i "s|/usr/bin/iceweasel|/usr/bin/x-www-browser|g;s|icedove|thunderbird|g" "${MIME_TYPES_RDF_FILE}"
     else
         output_info "No fix up for ${MIME_TYPES_RDF_FILE} needed."
     fi
