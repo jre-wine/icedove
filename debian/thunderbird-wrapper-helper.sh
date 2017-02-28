@@ -173,7 +173,7 @@ do_migrate_old_icedove_desktop() {
 
 # Only jump in loop if we haven't already done a migration before or the
 # user is forcing this by the option '--fixmime'.
-if [ ! -f ${TB_PROFILE_FOLDER}/.migrated -o "${FORCE_MIMEAPPS_MIGRATE}" = "1" ]; then
+if [ ! -f ${TB_PROFILE_FOLDER}/.migrated ] || [ "${FORCE_MIMEAPPS_MIGRATE}" = "1" ]; then
     if [ ! -f "${TB_PROFILE_FOLDER}/.migrated" ]; then
         output_debug "No migration mark '${TB_PROFILE_FOLDER}/.migrated' found, checking mimeapps.list files for possible migration."
     elif [ "${FORCE_MIMEAPPS_MIGRATE}" = "1" ]; then

@@ -121,8 +121,8 @@ fi
 
 # First try the default case for modification, there is only a folder
 # ${ID_PROFILE_FOLDER} and we can symlink to this.
-if [ -d "${ID_PROFILE_FOLDER}" -o -L "${ID_PROFILE_FOLDER}" ] && \
-   [ ! -d "${TB_PROFILE_FOLDER}" -a ! -L "${TB_PROFILE_FOLDER}" ]; then
+if { [ -d "${ID_PROFILE_FOLDER}" ] || [ -L "${ID_PROFILE_FOLDER}" ]; } && \
+   { [ ! -d "${TB_PROFILE_FOLDER}" ] && [ ! -L "${TB_PROFILE_FOLDER}" ]; }; then
     output_debug "found folder '${ID_PROFILE_FOLDER}'"
     output_debug "not found folder or symlink '${TB_PROFILE_FOLDER}'"
     output_debug "Start Thunderbird profile adoptions, please be patient!"
@@ -147,7 +147,7 @@ fi
 
 # We found both profile folder, and .thunderbird is a symlink,
 # we need to check if .thunderbird is symlinked to .icedove
-if [ -d "${ID_PROFILE_FOLDER}" -a -L "${TB_PROFILE_FOLDER}" ] && \
+if { [ -d "${ID_PROFILE_FOLDER}" ] && [ -L "${TB_PROFILE_FOLDER}" ]; } && \
    [ "$(readlink -e "${TB_PROFILE_FOLDER}")" = "${ID_PROFILE_FOLDER}" ];then
 
     output_debug "Found folder ${ID_PROFILE_FOLDER}, found a symlink ${TB_PROFILE_FOLDER} pointing to ${ID_PROFILE_FOLDER}"
@@ -164,7 +164,7 @@ if [ -d "${ID_PROFILE_FOLDER}" -a -L "${TB_PROFILE_FOLDER}" ] && \
     fi
 
 # ... or the opposite if .icedove is symlinked to .thunderbird
-elif [ -d "${TB_PROFILE_FOLDER}" -a -L "${ID_PROFILE_FOLDER}" ] && \
+elif { [ -d "${TB_PROFILE_FOLDER}" ] && [ -L "${ID_PROFILE_FOLDER}" ]; } && \
      [ "$(readlink -e "${ID_PROFILE_FOLDER}")" != "${TB_PROFILE_FOLDER}" ];then
 
     output_debug "Found folder ${TB_PROFILE_FOLDER}, found a symlink ${ID_PROFILE_FOLDER} pointing to ${TB_PROFILE_FOLDER}"
@@ -184,8 +184,8 @@ elif [ -d "${TB_PROFILE_FOLDER}" -a -L "${ID_PROFILE_FOLDER}" ] && \
 # is a state we can't solve on our own !!! The user needs to interact and
 # has probably a old or otherwise used Thunderbird installation. Which one
 # is the correct one to use?
-elif [ -d "${ID_PROFILE_FOLDER}" -o -L "${ID_PROFILE_FOLDER}" ] && \
-     [ -d "${TB_PROFILE_FOLDER}" -o -L "${TB_PROFILE_FOLDER}" ] && \
+elif { [ -d "${ID_PROFILE_FOLDER}" ] || [ -L "${ID_PROFILE_FOLDER}" ]; } && \
+     { [ -d "${TB_PROFILE_FOLDER}" ] || [ -L "${TB_PROFILE_FOLDER}" ]; } && \
      [ "$(readlink -e "${TB_PROFILE_FOLDER}")" != "${ID_PROFILE_FOLDER}" ]; then
 
     output_debug "There is already a folder or symlink '${TB_PROFILE_FOLDER}', will do nothing."
