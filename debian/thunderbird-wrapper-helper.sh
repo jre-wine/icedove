@@ -240,18 +240,18 @@ case "${DESKTOP}" in
         if [ $? -ne 0 ]; then
             local_xmessage -center "${DOT_THUNDERBIRD_EXISTS}"
         fi
-        FAIL=1
+        export FAIL=1
         ;;
     kde)
         local_kdialog --title "${TITLE}" --msgbox "${DOT_THUNDERBIRD_EXISTS}"
         if [ $? -ne 0 ]; then
             local_xmessage -center "${DOT_THUNDERBIRD_EXISTS}"
         fi
-        FAIL=1
+        export FAIL=1
         ;;
     *)
         xmessage -center "${DOT_THUNDERBIRD_EXISTS}"
-        FAIL=1
+        export FAIL=1
         ;;
 esac
 }
@@ -268,18 +268,18 @@ else
             if [ $? -ne 0 ]; then
                 local_xmessage -center "${THUNDERBIRD_PROFILE_LINKING_ERROR}"
             fi
-            FAIL=1
+            export FAIL=1
             ;;
         kde)
             local_kdialog --title "${TITLE}" --msgbox "${THUNDERBIRD_PROFILE_LINKING_ERROR}"
             if [ $? -ne 0 ]; then
                 local_xmessage -center "${THUNDERBIRD_PROFILE_LINKING_ERROR}"
             fi
-            FAIL=1
+            export FAIL=1
             ;;
         *)
             xmessage -center "${THUNDERBIRD_PROFILE_LINKING_ERROR}"
-            FAIL=1
+            export FAIL=1
             ;;
     esac
     return 1
