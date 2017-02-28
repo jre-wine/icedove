@@ -96,7 +96,7 @@ TITLE="Icedove to Thunderbird Profile adoption"
 # Simple search all files where we made a backup from
 do_collect_backup_files () {
 output_debug "Collect all files we've made a backup."
-BACKUP_FILES=$(find ${TB_PROFILE_FOLDER}/ -type f -name "*backup_thunderbird_migration*")
+BACKUP_FILES=$(find "${TB_PROFILE_FOLDER}/" -type f -name "*backup_thunderbird_migration*")
 if [ "${BACKUP_FILES}" != "" ]; then
     output_info "The following backups related Icedove to Thunderbird transition are existing:"
     cat << EOF
@@ -109,7 +109,7 @@ fi
 
 # Create the file .thunderbird/.migrated with some content
 do_create_migrated_mark_file (){
-cat <<EOF > ${TB_PROFILE_FOLDER}/.migrated
+cat <<EOF > "${TB_PROFILE_FOLDER}/.migrated"
 This is a automatically created file by /usr/bin/thunderbird, it will be
 recreated by every start of Thunderbird. Remove that files only if you know
 the propose of this file.
@@ -121,8 +121,8 @@ EOF
 
 # Fix the file $PROFILE/mimeTypes.rdf
 do_fix_mimetypes_rdf (){
-for MIME_TYPES_RDF_FILE in $(find ${TB_PROFILE_FOLDER}/ -name mimeTypes.rdf); do
-    RDF_SEARCH_PATTERN=$(grep '/usr/bin/iceweasel\|icedove' ${MIME_TYPES_RDF_FILE})
+for MIME_TYPES_RDF_FILE in $(find "${TB_PROFILE_FOLDER}/" -name mimeTypes.rdf); do
+    RDF_SEARCH_PATTERN=$(grep '/usr/bin/iceweasel\|icedove' "${MIME_TYPES_RDF_FILE}")
     if [ "${RDF_SEARCH_PATTERN}" != "" ]; then
         output_debug "Backup ${MIME_TYPES_RDF_FILE} to ${MIME_TYPES_RDF_FILE}.backup_thunderbird_migration-${DATE}"
         cp "${MIME_TYPES_RDF_FILE}" "${MIME_TYPES_RDF_FILE}.backup_thunderbird_migration-${DATE}"
@@ -173,13 +173,13 @@ do_migrate_old_icedove_desktop() {
 
 # Only jump in loop if we haven't already done a migration before or the
 # user is forcing this by the option '--fixmime'.
-if [ ! -f ${TB_PROFILE_FOLDER}/.migrated ] || [ "${FORCE_MIMEAPPS_MIGRATE}" = "1" ]; then
+if [ ! -f "${TB_PROFILE_FOLDER}/.migrated" ] || [ "${FORCE_MIMEAPPS_MIGRATE}" = "1" ]; then
     if [ ! -f "${TB_PROFILE_FOLDER}/.migrated" ]; then
         output_debug "No migration mark '${TB_PROFILE_FOLDER}/.migrated' found, checking mimeapps.list files for possible migration."
     elif [ "${FORCE_MIMEAPPS_MIGRATE}" = "1" ]; then
         output_debug "Migration enforced by user! Checking mimeapps.list files once again for possible migration."
     fi
-    for MIMEAPPS_LIST in ${HOME}/.config/mimeapps.list ${HOME}/.local/share/applications/mimeapps.list; do
+    for MIMEAPPS_LIST in "${HOME}/.config/mimeapps.list" "${HOME}/.local/share/applications/mimeapps.list"; do
         # Check if file exists and has old icedove entry
         if [ -e "${MIMEAPPS_LIST}" ] && \
               grep -iq "\(userapp-\)*icedove\(-.*\)*\.desktop" "${MIMEAPPS_LIST}"; then
@@ -190,7 +190,7 @@ if [ ! -f ${TB_PROFILE_FOLDER}/.migrated ] || [ "${FORCE_MIMEAPPS_MIGRATE}" = "1
             # Fix mimeapps.list and create a backup, but it's really unlikely we
             # have an existing backup so no further checking here!
             # (requires GNU sed 3.02 or ssed for case-insensitive "I")
-            sed -i.backup_thunderbird_migration-${DATE} "s|\(userapp-\)*icedove\(-.*\)*\.desktop|thunderbird.desktop|gI" "${MIMEAPPS_LIST}"
+            sed -i."backup_thunderbird_migration-${DATE}" "s|\(userapp-\)*icedove\(-.*\)*\.desktop|thunderbird.desktop|gI" "${MIMEAPPS_LIST}"
             if [ $? -ne 0 ]; then
                 output_info "The configuration file for default applications for some MIME types"
                 output_info "'${MIMEAPPS_LIST}' couldn't be fixed."
@@ -219,7 +219,7 @@ fi
 # *.desktop files and their reverse cache mimeinfo cache provide information
 # about available applications.
 
-for ICEDOVE_DESKTOP in $(find ${HOME}/.local/share/applications/ -iname "*icedove*.desktop"); do
+for ICEDOVE_DESKTOP in $(find "${HOME}/.local/share/applications/" -iname "*icedove*.desktop"); do
     output_debug "Backup ${ICEDOVE_DESKTOP} to ${ICEDOVE_DESKTOP}.backup_thunderbird_migration-${DATE}"
     ICEDOVE_DESKTOP_COPY=${ICEDOVE_DESKTOP}.backup_thunderbird_migration-${DATE}
     mv "${ICEDOVE_DESKTOP}" "${ICEDOVE_DESKTOP_COPY}"
