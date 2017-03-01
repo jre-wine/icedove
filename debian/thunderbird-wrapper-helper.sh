@@ -44,8 +44,8 @@ An existing profile folder (or symlink) '.thunderbird' was found in
 your Home directory '${HOME}/' while trying to migrate the Icedove
 profile(s) folder!
 
-This can probably be an old, currently not used profile folder or
-you maybe using a Thunderbird installation from the Mozilla packages.
+This could be an old, currently not used profile folder or you might
+be using a Thunderbird installation from the Mozilla packages.
 If you don't need this old profile folder, you can remove or backup
 it and start Thunderbird again.
 
@@ -108,12 +108,12 @@ do_collect_backup_files () {
 output_debug "Collect all files we've made a backup."
 BACKUP_FILES=$(find -L "${TB_PROFILE_FOLDER}/" -type f -name "*backup_thunderbird_migration*")
 if [ "${BACKUP_FILES}" != "" ]; then
-    output_info "The following backups related Icedove to Thunderbird transition are existing:"
+    output_info "The following backups related to the Icedove to Thunderbird transition are existing:"
     cat << EOF
 ${BACKUP_FILES}
 EOF
 else
-    output_info "No backups related Icedove to Thunderbird transition found."
+    output_info "No backups related to the Icedove to Thunderbird transition found."
 fi
 }
 
