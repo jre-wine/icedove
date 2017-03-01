@@ -106,7 +106,7 @@ TITLE="Icedove to Thunderbird Profile adoption"
 # Simple search all files where we made a backup from
 do_collect_backup_files () {
 output_debug "Collect all files we've made a backup."
-BACKUP_FILES=$(find "${TB_PROFILE_FOLDER}/" -type f -name "*backup_thunderbird_migration*")
+BACKUP_FILES=$(find -L "${TB_PROFILE_FOLDER}/" -type f -name "*backup_thunderbird_migration*")
 if [ "${BACKUP_FILES}" != "" ]; then
     output_info "The following backups related Icedove to Thunderbird transition are existing:"
     cat << EOF
@@ -131,7 +131,7 @@ EOF
 
 # Fix the file $PROFILE/mimeTypes.rdf
 do_fix_mimetypes_rdf (){
-for MIME_TYPES_RDF_FILE in $(find "${TB_PROFILE_FOLDER}/" -name mimeTypes.rdf); do
+for MIME_TYPES_RDF_FILE in $(find -L "${TB_PROFILE_FOLDER}/" -name mimeTypes.rdf); do
     RDF_SEARCH_PATTERN=$(grep '/usr/bin/iceweasel\|icedove' "${MIME_TYPES_RDF_FILE}")
     if [ "${RDF_SEARCH_PATTERN}" != "" ]; then
         output_debug "Backup ${MIME_TYPES_RDF_FILE} to ${MIME_TYPES_RDF_FILE}.backup_thunderbird_migration-${DATE}"
