@@ -44,7 +44,7 @@ An existing profile folder (or symlink) '.thunderbird' was found in
 your Home directory '${HOME}/' while trying to migrate the Icedove
 profile(s) folder!
 
-This can probably be a old, currently not used profile folder or
+This can probably be an old, currently not used profile folder or
 you maybe using a Thunderbird installation from the Mozilla packages.
 If you don't need this old profile folder, you can remove or backup
 it and start Thunderbird again.
@@ -120,7 +120,7 @@ fi
 # Create the file .thunderbird/.migrated with some content
 do_create_migrated_mark_file (){
 cat <<EOF > "${TB_PROFILE_FOLDER}/.migrated"
-This is a automatically created file by /usr/bin/thunderbird, it will be
+This is an automatically created file by /usr/bin/thunderbird, it will be
 recreated by every start of Thunderbird. Remove that files only if you know
 the propose of this file.
 
@@ -242,7 +242,7 @@ for ICEDOVE_DESKTOP in $(find "${HOME}/.local/share/applications/" -iname "*iced
 done
 }
 
-# Print out a error message about not possible adoption
+# Print out an error message about not possible adoption
 do_thunderbird2icedove_error_out (){
 case "${DESKTOP}" in
     gnome|mate|xfce)
@@ -338,7 +338,7 @@ if [ "${VERBOSE}" = "1" ]; then
 fi
 }
 
-# Giving out a information how this script can be called
+# Giving out an information how this script can be called
 usage () {
 cat << EOF
 
@@ -373,7 +373,7 @@ Examples:
  ${0##*/} --help
 
     Writes this help messages on stdout. If any other option is given it
-    will be ignored. Note that Thunderbird also has a option '-h' which needs
+    will be ignored. Note that Thunderbird also has an option '-h' which needs
     explictely given if want the help output for Thunderbird!
 
  ${0##*/} --verbose

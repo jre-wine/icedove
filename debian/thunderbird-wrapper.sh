@@ -6,7 +6,7 @@
 #
 # Purpose:
 #   This is a wrapper script for starting the thunderbird binary with taking
-#   care of the searching for a old user Icedove profile folder and adopting
+#   care of the searching for an old user Icedove profile folder and adopting
 #   the folder into the new place if possible.
 #
 # Environment:
@@ -107,7 +107,7 @@ fi
 # Thunderbird binary is finding the existing profiles in the folder         #
 # $(HOME)/.thunderbird folder or a valid symlink pointing to the profiles.  #
 #                                                                           #
-# To "migrate" a old existing Icedove profile we can simply do a symlink    #
+# To "migrate" an old existing Icedove profile we can simply do a symlink   #
 # from $(HOME)/.thunderbird --> $(HOME)/.icedove .                          #
 #                                                                           #
 # Afterwards do some changes to the file mimeTypes.rdf within every         #
@@ -182,7 +182,7 @@ elif { [ -d "${TB_PROFILE_FOLDER}" ] && [ -L "${ID_PROFILE_FOLDER}" ]; } && \
 
 # We found both profile folder, but they are not linked to each other! This
 # is a state we can't solve on our own !!! The user needs to interact and
-# has probably a old or otherwise used Thunderbird installation. Which one
+# has probably an old or otherwise used Thunderbird installation. Which one
 # is the correct one to use?
 elif { [ -d "${ID_PROFILE_FOLDER}" ] || [ -L "${ID_PROFILE_FOLDER}" ]; } && \
      { [ -d "${TB_PROFILE_FOLDER}" ] || [ -L "${TB_PROFILE_FOLDER}" ]; } && \
@@ -209,7 +209,7 @@ elif { [ -d "${ID_PROFILE_FOLDER}" ] || [ -L "${ID_PROFILE_FOLDER}" ]; } && \
 fi
 
 if [ "$FAIL" = 1 ]; then
-    output_info "A error happened while trying to migrate the old Icedove profile folder '${ID_PROFILE_FOLDER}'."
+    output_info "An error happened while trying to migrate the old Icedove profile folder '${ID_PROFILE_FOLDER}'."
     output_info "Please take a look into the syslog file!"
     exit 1
 fi
